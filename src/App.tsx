@@ -15,7 +15,6 @@ import VocabularyPanel from './components/VocabularyPanel'
 
 import {
   analyzeText,
-  getRepeatedWords,
 } from './engine/analyzer'
 
 function App() {
