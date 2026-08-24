@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -40,14 +41,50 @@ function App() {
    * Analyze the document first.
    */
   const vocabulary = useMemo(
-    () => analyzeText(content),
-    [content]
+  () =>
+    [...analyzeText(content)].sort(
+      (a, b) =>
+        a.word.localeCompare(
+          b.word
+        )
+    ),
+  [content]
+)
+useEffect(() => {
+  if (!selectedWord) return
+
+  const wordData = vocabulary.find(
+    ({ word }) => word === selectedWord
   )
 
+  const count =
+    wordData?.occurrences.length ?? 0
+
+  if (count === 0) {
+    setSelectedWord(null)
+    setCurrentOccurrence(0)
+    return
+  }
+
+  if (currentOccurrence >= count) {
+    setCurrentOccurrence(count - 1)
+  }
+}, [
+  vocabulary,
+  selectedWord,
+  currentOccurrence,
+])
   const repeatedWords = useMemo(
-    () => getRepeatedWords(vocabulary),
-    [vocabulary]
-  )
+  () =>
+    [...analyzeText(content)]
+      .filter(
+        ({ count }) => count > 1
+      )
+      .sort(
+        (a, b) => b.count - a.count
+      ),
+  [content]
+)
 
   /*
    * Find the currently selected word.
@@ -161,6 +198,8 @@ function App() {
             handleNextOccurrence
           }
         />
+
+        
 
       </div>
 
