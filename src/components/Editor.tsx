@@ -1,70 +1,182 @@
 import {
   forwardRef,
+  useEffect,
   useImperativeHandle,
-  useRef,
 } from 'react'
+import {
+  EditorContent,
+  useEditor,
+} from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+
+import {
+  occurrenceHighlightKey,
+  OccurrenceHighlight,
+} from '../editor/occurrenceHighlight'
 
 export interface EditorHandle {
-  focusOccurrence: (start: number, end: number) => void
+  focusOccurrence: (
+    occurrenceIndex: number
+  ) => void
 }
 
 interface EditorProps {
   content: string
   onChange: (content: string) => void
+  selectedWord: string | null
+  currentOccurrence: number
 }
 
-const Editor = forwardRef<EditorHandle, EditorProps>(
-  function Editor({ content, onChange }, ref) {
-    const textareaRef =
-      useRef<HTMLTextAreaElement>(null)
+const Editor = forwardRef<
+  EditorHandle,
+  EditorProps
+>(function Editor(
+  {
+    content,
+    onChange,
+    selectedWord,
+    currentOccurrence,
+  },
+  ref
+) {
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      OccurrenceHighlight,
+    ],
 
-    useImperativeHandle(ref, () => ({
-      focusOccurrence(start, end) {
-        const textarea = textareaRef.current
+    content,
 
-        if (!textarea) return
-
-        textarea.focus()
-
-        textarea.setSelectionRange(start, end)
-
-        /*
-         * scrollIntoView() cannot directly be used on
-         * a textarea selection, so estimate the line
-         * containing the occurrence.
-         */
-        const textBeforeOccurrence =
-          textarea.value.slice(0, start)
-
-        const lineNumber =
-          textBeforeOccurrence.split('\n').length
-
-        const lineHeight = 32
-
-        const targetScrollTop =
-          (lineNumber - 1) * lineHeight
-
-        textarea.scrollTop = Math.max(
-          0,
-          targetScrollTop -
-            textarea.clientHeight / 2
-        )
+    editorProps: {
+      attributes: {
+        class:
+          'h-full min-h-full outline-none px-8 py-8 text-lg leading-8',
       },
-    }))
+    },
 
-    return (
-      <textarea
-        ref={textareaRef}
-        value={content}
-        onChange={(event) =>
-          onChange(event.target.value)
+    onUpdate({ editor }) {
+      onChange(editor.getText())
+    },
+  })
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      focusOccurrence(
+        occurrenceIndex: number
+      ) {
+        if (!editor || !selectedWord) {
+          return
         }
-        placeholder="Start writing..."
-        className="h-full w-full resize-none border-0 bg-transparent p-8 text-lg leading-8 outline-none placeholder:text-zinc-400"
-        spellCheck="true"
-      />
+
+        const occurrences: {
+          from: number
+          to: number
+        }[] = []
+
+        const regex = new RegExp(
+          `\\b${escapeRegExp(selectedWord)}\\b`,
+          'gi'
+        )
+
+        editor.state.doc.descendants(
+          (node, pos) => {
+            if (!node.isText) {
+              return
+            }
+
+            const text = node.text ?? ''
+
+            let match: RegExpExecArray | null
+
+            while (
+              (match =
+                regex.exec(text)) !== null
+            ) {
+              const from =
+                pos + match.index
+
+              const to =
+                from + match[0].length
+
+              occurrences.push({
+                from,
+                to,
+              })
+            }
+          }
+        )
+
+        const occurrence =
+          occurrences[occurrenceIndex]
+
+        if (!occurrence) {
+          return
+        }
+
+        editor
+          .chain()
+          .focus()
+          .setTextSelection({
+            from: occurrence.from,
+            to: occurrence.to,
+          })
+          .scrollIntoView()
+          .run()
+      },
+    }),
+    [editor, selectedWord]
+  )
+
+  useEffect(() => {
+    if (!editor) return
+
+    editor.view.dispatch(
+      editor.state.tr.setMeta(
+        occurrenceHighlightKey,
+        {
+          word: selectedWord,
+          currentOccurrence,
+        }
+      )
     )
+  }, [
+    editor,
+    selectedWord,
+    currentOccurrence,
+  ])
+
+  useEffect(() => {
+    if (!editor) return
+
+    const currentText = editor.getText()
+
+    if (currentText !== content) {
+      editor.commands.setContent(content)
+    }
+  }, [content, editor])
+
+  if (!editor) {
+    return null
   }
-)
+
+  return (
+    <div className="h-full overflow-y-auto">
+      <EditorContent
+        editor={editor}
+        className="h-full"
+      />
+    </div>
+  )
+})
+
+function escapeRegExp(
+  value: string
+): string {
+  return value.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    '\\$&'
+  )
+}
 
 export default Editor

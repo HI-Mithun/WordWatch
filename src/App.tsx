@@ -18,13 +18,16 @@ import {
 } from './engine/analyzer'
 
 function App() {
-  const [content, setContent] = useState('')
+  const [content, setContent] =
+    useState('')
 
   const [selectedWord, setSelectedWord] =
     useState<string | null>(null)
 
-  const [currentOccurrence, setCurrentOccurrence] =
-    useState(0)
+  const [
+    currentOccurrence,
+    setCurrentOccurrence,
+  ] = useState(0)
 
   const editorRef =
     useRef<EditorHandle>(null)
@@ -33,6 +36,9 @@ function App() {
     ? content.trim().split(/\s+/).length
     : 0
 
+  /*
+   * Analyze the document first.
+   */
   const vocabulary = useMemo(
     () => analyzeText(content),
     [content]
@@ -43,82 +49,81 @@ function App() {
     [vocabulary]
   )
 
-  const handleWordSelect = (word: string) => {
-    const wordData = vocabulary.find(
-      (item) => item.word === word
+  /*
+   * Find the currently selected word.
+   */
+  const selectedWordData =
+    vocabulary.find(
+      ({ word }) =>
+        word === selectedWord
     )
 
-    if (!wordData || wordData.occurrences.length === 0) {
+  const occurrenceCount =
+    selectedWordData?.occurrences.length ?? 0
+
+  /*
+   * Select a word and jump to its first
+   * occurrence.
+   */
+  const handleWordSelect = (
+    word: string
+  ) => {
+    setSelectedWord(word)
+    setCurrentOccurrence(0)
+
+    requestAnimationFrame(() => {
+      editorRef.current?.focusOccurrence(0)
+    })
+  }
+
+  /*
+   * Move to the next occurrence.
+   */
+  const handleNextOccurrence = () => {
+    if (
+      !selectedWord ||
+      occurrenceCount === 0
+    ) {
       return
     }
 
-    setSelectedWord(word)
+    const next =
+      (currentOccurrence + 1) %
+      occurrenceCount
 
-    setCurrentOccurrence(0)
+    setCurrentOccurrence(next)
 
-    const occurrence =
-      wordData.occurrences[0]
-
-    editorRef.current?.focusOccurrence(
-      occurrence.start,
-      occurrence.end
-    )
+    requestAnimationFrame(() => {
+      editorRef.current?.focusOccurrence(
+        next
+      )
+    })
   }
 
-  const handleNextOccurrence = () => {
-    if (!selectedWord) return
-
-    const wordData = vocabulary.find(
-      (item) => item.word === selectedWord
-    )
-
-    if (!wordData) return
-
-    const total =
-      wordData.occurrences.length
-
-    if (total === 0) return
-
-    const nextIndex =
-      (currentOccurrence + 1) % total
-
-    setCurrentOccurrence(nextIndex)
-
-    const occurrence =
-      wordData.occurrences[nextIndex]
-
-    editorRef.current?.focusOccurrence(
-      occurrence.start,
-      occurrence.end
-    )
-  }
-
+  /*
+   * Move to the previous occurrence.
+   */
   const handlePreviousOccurrence = () => {
-    if (!selectedWord) return
+    if (
+      !selectedWord ||
+      occurrenceCount === 0
+    ) {
+      return
+    }
 
-    const wordData = vocabulary.find(
-      (item) => item.word === selectedWord
-    )
+    const previous =
+      (currentOccurrence -
+        1 +
+        occurrenceCount) %
+      occurrenceCount
 
-    if (!wordData) return
+    setCurrentOccurrence(previous)
 
-    const total =
-      wordData.occurrences.length
-
-    if (total === 0) return
-
-    const previousIndex =
-      (currentOccurrence - 1 + total) % total
-
-    setCurrentOccurrence(previousIndex)
-
-    const occurrence =
-      wordData.occurrences[previousIndex]
-
-    editorRef.current?.focusOccurrence(
-      occurrence.start,
-      occurrence.end
-    )
+    requestAnimationFrame(() => {
+      editorRef.current?.focusOccurrence(
+        previous
+      )
+    })
   }
 
   return (
@@ -133,15 +138,21 @@ function App() {
             ref={editorRef}
             content={content}
             onChange={setContent}
+            selectedWord={selectedWord}
+            currentOccurrence={
+              currentOccurrence
+            }
           />
         </main>
 
         <VocabularyPanel
           vocabulary={vocabulary}
-          content={content}
           repeatedWords={repeatedWords}
           selectedWord={selectedWord}
-          currentOccurrence={currentOccurrence}
+          currentOccurrence={
+            currentOccurrence
+          }
+          content={content}
           onWordSelect={handleWordSelect}
           onPreviousOccurrence={
             handlePreviousOccurrence

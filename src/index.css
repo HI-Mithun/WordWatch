@@ -1,1 +1,15 @@
 @import "tailwindcss";
+
+.wordwatch-occurrence {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.wordwatch-current-occurrence {
+  text-decoration-line: underline;
+  text-decoration-style: solid;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}

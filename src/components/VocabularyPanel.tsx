@@ -31,6 +31,7 @@ function VocabularyPanel({
 
   const totalOccurrences =
     selectedWordData?.occurrences.length ?? 0
+    
     const currentOccurrenceData =
   selectedWordData?.occurrences[
     currentOccurrence
@@ -135,9 +136,8 @@ const currentContext =
                       </span>
                     </button>
 
-                    {selectedWord === word &&
-                      totalOccurrences > 0 && (
-                        <div className="flex items-center justify-between border-t border-zinc-300 px-3 py-2 dark:border-zinc-700">
+                    {selectedWord === word && totalOccurrences > 0 && (
+                      <div className="flex items-center justify-between border-t border-zinc-300 px-3 py-2 dark:border-zinc-700">
 
                           <button
                             type="button"
@@ -162,25 +162,25 @@ const currentContext =
                           >
                             ›
                           </button>
-                          {currentContext && (
-                            <div className="border-t border-zinc-300 px-3 py-3 text-xs leading-5 text-zinc-500 dark:border-zinc-700">
-                              <span>{currentContext.before}</span>
 
-                              <span className="font-semibold text-zinc-900 underline decoration-2 underline-offset-2 dark:text-zinc-100">
-                                {currentContext.word}
-                              </span>
+                      </div>
+                    )}
 
-                              <span>{currentContext.after}</span>
-                            </div>
-                          )}
+                    {selectedWord === word && currentContext && (
+                      <div className="border-t border-zinc-300 px-3 py-3 text-xs leading-5 text-zinc-500 dark:border-zinc-700">
+                        <span>{currentContext.before}</span>
 
-                        </div>
-                      )}
+                        <span className="font-semibold text-zinc-900 underline decoration-2 underline-offset-2 dark:text-zinc-100">
+                          {currentContext.word}
+                        </span>
+
+                        <span>{currentContext.after}</span>
+                      </div>
+                    )}
 
                   </div>
                 )
               )}
-
             </div>
           )}
 
