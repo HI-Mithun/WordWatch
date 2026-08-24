@@ -138,6 +138,7 @@ function App() {
 
         <VocabularyPanel
           vocabulary={vocabulary}
+          content={content}
           repeatedWords={repeatedWords}
           selectedWord={selectedWord}
           currentOccurrence={currentOccurrence}

@@ -1,10 +1,13 @@
 import type { WordFrequency } from '../engine/analyzer'
+import { getWordContext } from '../engine/context'
+
 
 interface VocabularyPanelProps {
   vocabulary: WordFrequency[]
   repeatedWords: WordFrequency[]
   selectedWord: string | null
   currentOccurrence: number
+  content: string
   onWordSelect: (word: string) => void
   onPreviousOccurrence: () => void
   onNextOccurrence: () => void
@@ -15,10 +18,12 @@ function VocabularyPanel({
   repeatedWords,
   selectedWord,
   currentOccurrence,
+  content,
   onWordSelect,
   onPreviousOccurrence,
   onNextOccurrence,
 }: VocabularyPanelProps) {
+
   const selectedWordData =
     vocabulary.find(
       ({ word }) => word === selectedWord
@@ -26,6 +31,19 @@ function VocabularyPanel({
 
   const totalOccurrences =
     selectedWordData?.occurrences.length ?? 0
+    const currentOccurrenceData =
+  selectedWordData?.occurrences[
+    currentOccurrence
+  ]
+
+const currentContext =
+  currentOccurrenceData
+    ? getWordContext(
+        content,
+        currentOccurrenceData.start,
+        currentOccurrenceData.end
+      )
+    : null
 
   return (
     <aside className="flex w-80 shrink-0 flex-col border-l border-zinc-200 dark:border-zinc-800">
@@ -98,8 +116,8 @@ function VocabularyPanel({
                     key={word}
                     className={`rounded-md ${
                       selectedWord === word
-                        ? 'bg-zinc-200 dark:bg-zinc-800'
-                        : 'bg-zinc-100 dark:bg-zinc-900'
+                        ? 'bg-zinc-200 font-medium dark:bg-zinc-800'
+                        : 'hover:bg-zinc-100 dark:hover:bg-zinc-900'
                     }`}
                   >
 
@@ -124,8 +142,9 @@ function VocabularyPanel({
                           <button
                             type="button"
                             onClick={onPreviousOccurrence}
-                            className="rounded px-2 py-1 text-sm hover:bg-zinc-300 dark:hover:bg-zinc-700"
+                            className="rounded-md border border-zinc-200 px-2 py-1 text-base leading-none hover:bg-zinc-200 dark:border-zinc-700 dark:hover:bg-zinc-700"
                             aria-label="Previous occurrence"
+                            title="Previous occurrence"
                           >
                             ‹
                           </button>
@@ -137,11 +156,23 @@ function VocabularyPanel({
                           <button
                             type="button"
                             onClick={onNextOccurrence}
-                            className="rounded px-2 py-1 text-sm hover:bg-zinc-300 dark:hover:bg-zinc-700"
+                            className="rounded-md border border-zinc-200 px-2 py-1 text-base leading-none hover:bg-zinc-200 dark:border-zinc-700 dark:hover:bg-zinc-700"
                             aria-label="Next occurrence"
+                            title="Next occurrence"
                           >
                             ›
                           </button>
+                          {currentContext && (
+                            <div className="border-t border-zinc-300 px-3 py-3 text-xs leading-5 text-zinc-500 dark:border-zinc-700">
+                              <span>{currentContext.before}</span>
+
+                              <span className="font-semibold text-zinc-900 underline decoration-2 underline-offset-2 dark:text-zinc-100">
+                                {currentContext.word}
+                              </span>
+
+                              <span>{currentContext.after}</span>
+                            </div>
+                          )}
 
                         </div>
                       )}
