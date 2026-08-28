@@ -1,3 +1,4 @@
+import DocumentSidebar from './components/DocumentSidebar'
 import {
   useEffect,
   useMemo,
@@ -17,9 +18,21 @@ import {
   analyzeText,
 } from './engine/analyzer'
 
+import {
+  createDocument,
+  getAllDocuments,
+  getDocument,
+  updateDocument,
+  type Document,
+} from './storage/database'
+
+
 function App() {
   const [content, setContent] =
     useState('')
+
+  // const [documentId, setDocumentId] =
+  // useState<string | null>(null)
 
   const [selectedWord, setSelectedWord] =
     useState<string | null>(null)
@@ -32,9 +45,72 @@ function App() {
   const editorRef =
     useRef<EditorHandle>(null)
 
+  const [activeDocumentId, setActiveDocumentId] =
+    useState<string | null>(null)
+
+  const [documents, setDocuments] =
+    useState<Document[]>([])
+
+  const [sidebarOpen, setSidebarOpen] =
+    useState(false)
+
+  const [openDocumentIds, setOpenDocumentIds] =
+    useState<string[]>([])
+
+    useEffect(() => {
+      async function initializeDocuments() {
+        const savedDocuments =
+          await getAllDocuments()
+
+        if (savedDocuments.length > 0) {
+          setDocuments(savedDocuments)
+
+          const document =
+            savedDocuments[0]
+
+          setOpenDocumentIds([document.id])
+          setActiveDocumentId(document.id)
+          setContent(document.content)
+        } else {
+          const document =
+            await createDocument()
+
+          setDocuments([document])
+          setOpenDocumentIds([document.id])
+          setActiveDocumentId(document.id)
+          setContent(document.content)
+        }
+      }
+
+      initializeDocuments()
+    }, [])
+
+    useEffect(() => {
+      if (!activeDocumentId) {
+        return
+      }
+
+      const timeout = setTimeout(() => {
+        updateDocument(
+          activeDocumentId,
+          {
+            content,
+          }
+        )
+      }, 500)
+
+      return () => {
+        clearTimeout(timeout)
+      }
+    }, [
+      content,
+      activeDocumentId,
+    ])
+
   const wordCount = content.trim()
     ? content.trim().split(/\s+/).length
     : 0
+    
 
   /*
    * Analyze the document first.
@@ -162,10 +238,177 @@ useEffect(() => {
     })
   }
 
+  const handleCreateDocument = async () => {
+    const document =
+      await createDocument()
+
+    setDocuments((current) => [
+      document,
+      ...current,
+    ])
+
+    setOpenDocumentIds((current) => [
+      ...current,
+      document.id,
+    ])
+
+    setActiveDocumentId(document.id)
+    setContent(document.content)
+
+    setSelectedWord(null)
+    setCurrentOccurrence(0)
+  }
+
+  const handleSwitchDocument = async (
+    id: string
+  ) => {
+    if (id === activeDocumentId) {
+      return
+    }
+
+    const document =
+      await getDocument(id)
+
+    if (!document) {
+      return
+    }
+
+    setOpenDocumentIds((current) => {
+      if (current.includes(document.id)) {
+        return current
+      }
+
+      return [
+        ...current,
+        document.id,
+      ]
+    })
+
+    setActiveDocumentId(document.id)
+    setContent(document.content)
+
+    setSelectedWord(null)
+    setCurrentOccurrence(0)
+  }
+
+  const handleCloseDocument = (
+    id: string
+  ) => {
+    setOpenDocumentIds((current) => {
+      const index =
+        current.indexOf(id)
+
+      const next = current.filter(
+        (documentId) =>
+          documentId !== id
+      )
+
+      if (id === activeDocumentId) {
+        const nextDocument =
+          next[index] ??
+          next[index - 1] ??
+          null
+
+        if (nextDocument) {
+          const document =
+            documents.find(
+              (item) =>
+                item.id === nextDocument
+            )
+
+          if (document) {
+            setActiveDocumentId(
+              document.id
+            )
+            setContent(
+              document.content
+            )
+          }
+        } else {
+          setActiveDocumentId(null)
+          setContent('')
+        }
+
+        setSelectedWord(null)
+        setCurrentOccurrence(0)
+      }
+
+      return next
+    })
+  }
+
+  const handleRenameDocument = async (
+    id: string,
+    title: string,
+  ) => {
+    const trimmedTitle =
+      title.trim()
+
+    if (!trimmedTitle) {
+      return
+    }
+
+    await updateDocument(id, {
+      title: trimmedTitle,
+    })
+
+    setDocuments((current) =>
+      current.map((document) =>
+        document.id === id
+          ? {
+              ...document,
+              title: trimmedTitle,
+              updatedAt: Date.now(),
+            }
+          : document,
+      ),
+    )
+  }
   return (
     <div className="flex h-screen flex-col bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-
-      <Header wordCount={wordCount} />
+      {sidebarOpen && (
+        <DocumentSidebar
+          documents={documents}
+          openDocumentIds={
+            openDocumentIds
+          }
+          activeDocumentId={
+            activeDocumentId
+          }
+          onOpenDocument={
+            handleSwitchDocument
+          }
+          onCreateDocument={
+            handleCreateDocument
+          }
+          onClose={() =>
+            setSidebarOpen(false)
+          }
+        />
+      )}
+      <Header
+        wordCount={wordCount}
+        documents={documents}
+        activeDocumentId={activeDocumentId}
+        openDocumentIds={
+          openDocumentIds
+        }
+        onCreateDocument={
+          handleCreateDocument
+        }
+        onSwitchDocument={
+          handleSwitchDocument
+        }
+        onCloseDocument={
+          handleCloseDocument
+        }
+        onOpenSidebar={() =>
+          setSidebarOpen(true)
+        }
+        onRenameDocument={
+          handleRenameDocument
+        } 
+      />
 
       <div className="flex min-h-0 flex-1">
 
