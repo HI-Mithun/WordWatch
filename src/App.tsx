@@ -28,6 +28,54 @@ import {
 } from './storage/database'
 
 
+
+function getPlainText(
+  content: string
+): string {
+  if (!content.trim()) {
+    return ''
+  }
+
+  try {
+    const parsed =
+      JSON.parse(content)
+
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      parsed.type === 'doc'
+    ) {
+      const extractText = (
+        node: any
+      ): string => {
+        if (node.type === 'text') {
+          return node.text ?? ''
+        }
+
+        if (
+          Array.isArray(node.content)
+        ) {
+          return node.content
+            .map(extractText)
+            .join(
+              node.type === 'paragraph'
+                ? '\n'
+                : ''
+            )
+        }
+
+        return ''
+      }
+
+      return extractText(parsed)
+    }
+  } catch {
+    // Existing plain-text document.
+  }
+
+  return content
+}
+
 function App() {
   const [content, setContent] =
     useState('')
@@ -118,7 +166,9 @@ function App() {
    */
   const vocabulary = useMemo(
   () =>
-    [...analyzeText(content)].sort(
+    [...analyzeText(
+      getPlainText(content)
+    )].sort(
       (a, b) =>
         a.word.localeCompare(
           b.word
@@ -152,7 +202,9 @@ useEffect(() => {
 ])
   const repeatedWords = useMemo(
   () =>
-    [...analyzeText(content)]
+    [...analyzeText(
+      getPlainText(content)
+    )]
       .filter(
         ({ count }) => count > 1
       )

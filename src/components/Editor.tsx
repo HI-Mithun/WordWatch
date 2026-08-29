@@ -7,6 +7,11 @@ import {
   EditorContent,
   useEditor,
 } from '@tiptap/react'
+
+import {
+  type JSONContent,
+} from '@tiptap/core'
+
 import StarterKit from '@tiptap/starter-kit'
 
 import {
@@ -14,7 +19,7 @@ import {
   OccurrenceHighlight,
 } from '../editor/occurrenceHighlight'
 
-export interface EditorHandle {
+export interface EditorHandle { 
   focusOccurrence: (
     occurrenceIndex: number
   ) => void
@@ -39,13 +44,38 @@ const Editor = forwardRef<
   },
   ref
 ) {
+  function parseEditorContent(
+  content: string
+): string | JSONContent {
+  if (!content.trim()) {
+    return ''
+  }
+
+  try {
+    const parsed =
+      JSON.parse(content)
+
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      parsed.type === 'doc'
+    ) {
+      return parsed
+    }
+  } catch {
+    // Existing plain-text document.
+  }
+
+  return content
+}
   const editor = useEditor({
     extensions: [
       StarterKit,
       OccurrenceHighlight,
     ],
 
-    content,
+    content:
+      parseEditorContent(content),
 
     editorProps: {
       attributes: {
@@ -55,8 +85,12 @@ const Editor = forwardRef<
     },
 
     onUpdate({ editor }) {
-      onChange(editor.getText())
-    },
+      onChange(
+        JSON.stringify(
+          editor.getJSON()
+        )
+      )
+},
   })
 
   useImperativeHandle(
@@ -149,10 +183,40 @@ const Editor = forwardRef<
   useEffect(() => {
     if (!editor) return
 
-    const currentText = editor.getText()
+    const parsedContent =
+      parseEditorContent(content)
 
-    if (currentText !== content) {
-      editor.commands.setContent(content)
+    if (
+      typeof parsedContent === 'string'
+    ) {
+      if (
+        editor.getText() !==
+        parsedContent
+      ) {
+        editor.commands.setContent(
+          parsedContent
+        )
+      }
+
+      return
+    }
+
+    const currentContent =
+      JSON.stringify(
+        editor.getJSON()
+      )
+
+    const nextContent =
+      JSON.stringify(
+        parsedContent
+      )
+
+    if (
+      currentContent !== nextContent
+    ) {
+      editor.commands.setContent(
+        parsedContent
+      )
     }
   }, [content, editor])
 
