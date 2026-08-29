@@ -1,3 +1,5 @@
+import { tokenize } from '../engine/tokenizer'
+
 import {
   forwardRef,
   useEffect,
@@ -103,43 +105,30 @@ const Editor = forwardRef<
           return
         }
 
-        const occurrences: {
-          from: number
-          to: number
-        }[] = []
+       const occurrences: {
+        from: number
+        to: number
+      }[] = []
 
-        const regex = new RegExp(
-          `\\b${escapeRegExp(selectedWord)}\\b`,
-          'gi'
-        )
+      editor.state.doc.descendants(
+        (node, pos) => {
+          if (!node.isText) {
+            return
+          }
 
-        editor.state.doc.descendants(
-          (node, pos) => {
-            if (!node.isText) {
-              return
-            }
+          const text = node.text ?? ''
+          const tokens = tokenize(text)
 
-            const text = node.text ?? ''
-
-            let match: RegExpExecArray | null
-
-            while (
-              (match =
-                regex.exec(text)) !== null
-            ) {
-              const from =
-                pos + match.index
-
-              const to =
-                from + match[0].length
-
+          for (const token of tokens) {
+            if (token.word === selectedWord) {
               occurrences.push({
-                from,
-                to,
+                from: pos + token.start,
+                to: pos + token.end,
               })
             }
           }
-        )
+        }
+      )
 
         const occurrence =
           occurrences[occurrenceIndex]
@@ -233,14 +222,5 @@ const Editor = forwardRef<
     </div>
   )
 })
-
-function escapeRegExp(
-  value: string
-): string {
-  return value.replace(
-    /[.*+?^${}()|[\]\\]/g,
-    '\\$&'
-  )
-}
 
 export default Editor

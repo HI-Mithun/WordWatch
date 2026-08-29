@@ -1,4 +1,6 @@
 import DocumentSidebar from './components/DocumentSidebar'
+import { getDocumentText } from './engine/documentText'
+
 import {
   useEffect,
   useMemo,
@@ -32,55 +34,6 @@ import {
   isDatabaseAvailable,
   type Document,
 } from './storage/database'
-
-
-
-function getPlainText(
-  content: string
-): string {
-  if (!content.trim()) {
-    return ''
-  }
-
-  try {
-    const parsed =
-      JSON.parse(content)
-
-    if (
-      parsed &&
-      typeof parsed === 'object' &&
-      parsed.type === 'doc'
-    ) {
-      const extractText = (
-        node: any
-      ): string => {
-        if (node.type === 'text') {
-          return node.text ?? ''
-        }
-
-        if (
-          Array.isArray(node.content)
-        ) {
-          return node.content
-            .map(extractText)
-            .join(
-              node.type === 'paragraph'
-                ? '\n'
-                : ''
-            )
-        }
-
-        return ''
-      }
-
-      return extractText(parsed)
-    }
-  } catch {
-    // Existing plain-text document.
-  }
-
-  return content
-}
 
 function App() {
   const [content, setContent] =
@@ -196,18 +149,20 @@ function App() {
   /*
    * Analyze the document first.
    */
+  const analysisText = useMemo(
+    () => getDocumentText(content),
+    [content]
+  )
   const vocabulary = useMemo(
-  () =>
-    [...analyzeText(
-      getPlainText(content)
-    )].sort(
-      (a, b) =>
-        a.word.localeCompare(
-          b.word
-        )
-    ),
-  [content]
-)
+    () =>
+      [...analyzeText(analysisText)].sort(
+       (a, b) =>
+         a.word.localeCompare(
+           b.word
+         )
+      ),
+    [content]
+  )
 useEffect(() => {
   if (!selectedWord) return
 
@@ -233,18 +188,16 @@ useEffect(() => {
   currentOccurrence,
 ])
   const repeatedWords = useMemo(
-  () =>
-    [...analyzeText(
-      getPlainText(content)
-    )]
-      .filter(
-        ({ count }) => count > 1
-      )
-      .sort(
-        (a, b) => b.count - a.count
-      ),
-  [content]
-)
+    () =>
+      [...analyzeText(analysisText)]
+        .filter(
+          ({ count }) => count > 1
+        )
+        .sort(
+          (a, b) => b.count - a.count
+        ),
+    [analysisText]
+  )
 
   /*
    * Find the currently selected word.
@@ -659,7 +612,7 @@ if (storageError) {
           currentOccurrence={
             currentOccurrence
           }
-          content={content}
+          content={analysisText}
           onWordSelect={handleWordSelect}
           onPreviousOccurrence={
             handlePreviousOccurrence

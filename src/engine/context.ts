@@ -53,6 +53,7 @@ function findSentenceStart(
       character === '.' ||
       character === '!' ||
       character === '?' ||
+      character === '।' ||
       character === '\n'
     ) {
       return index + 1
@@ -77,6 +78,7 @@ function findSentenceEnd(
       character === '.' ||
       character === '!' ||
       character === '?' ||
+      character === '।' ||
       character === '\n'
     ) {
       return index + 1

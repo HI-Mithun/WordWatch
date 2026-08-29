@@ -1,4 +1,5 @@
 import { Extension } from '@tiptap/core'
+import { tokenize } from '../engine/tokenizer'
 import {
   Plugin,
   PluginKey,
@@ -17,15 +18,6 @@ export const occurrenceHighlightKey =
   new PluginKey<OccurrenceState>(
     'occurrenceHighlight'
   )
-
-function escapeRegExp(
-  value: string
-): string {
-  return value.replace(
-    /[.*+?^${}()|[\]\\]/g,
-    '\\$&'
-  )
-}
 
 export const OccurrenceHighlight =
   Extension.create({
@@ -94,47 +86,38 @@ export const OccurrenceHighlight =
                     return
                   }
 
-                  const text =
-                    node.text ?? ''
+                  const text = node.text ?? ''
+                    const tokens = tokenize(text)
 
-                  const regex =
-                    new RegExp(
-                      `\\b${escapeRegExp(word)}\\b`,
-                      'gi'
-                    )
+                    for (const token of tokens) {
+                      if (token.word !== word) {
+                        continue
+                      }
 
-                  let match: RegExpExecArray | null
+                      const start =
+                        pos + token.start
 
-                  while (
-                    (match =
-                      regex.exec(text)) !== null
-                  ) {
-                    const start =
-                      pos + match.index
+                      const end =
+                        pos + token.end
 
-                    const end =
-                      start +
-                      match[0].length
+                      const isCurrent =
+                        occurrenceIndex === current
 
-                    const isCurrent =
-                      occurrenceIndex ===
-                      current
-
-                    decorations.push(
-                      Decoration.inline(
-                        start,
-                        end,
-                        {
-                          class:
-                            isCurrent
-                              ? 'wordwatch-current-occurrence'
-                              : 'wordwatch-occurrence',
-                        }
+                      decorations.push(
+                        Decoration.inline(
+                          start,
+                          end,
+                          {
+                            class:
+                              isCurrent
+                                ? 'wordwatch-current-occurrence'
+                                : 'wordwatch-occurrence',
+                          }
+                        )
                       )
-                    )
 
-                    occurrenceIndex++
-                  }
+                      occurrenceIndex++
+                    }
                 }
               )
 
