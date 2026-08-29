@@ -23,6 +23,7 @@ import {
   getAllDocuments,
   getDocument,
   updateDocument,
+  deleteDocument,
   type Document,
 } from './storage/database'
 
@@ -364,6 +365,61 @@ useEffect(() => {
       ),
     )
   }
+
+  const handleDeleteDocument = async (
+    id: string
+  ) => {
+    await deleteDocument(id)
+
+    setDocuments((current) =>
+      current.filter(
+        (document) =>
+          document.id !== id
+      )
+    )
+
+    setOpenDocumentIds((current) =>
+      current.filter(
+        (documentId) =>
+          documentId !== id
+      )
+    )
+
+    if (id === activeDocumentId) {
+      const remainingOpenIds =
+        openDocumentIds.filter(
+          (documentId) =>
+            documentId !== id
+        )
+
+      const nextId =
+        remainingOpenIds[0] ?? null
+
+      if (nextId) {
+        const nextDocument =
+          documents.find(
+            (document) =>
+              document.id === nextId
+          )
+
+        if (nextDocument) {
+          setActiveDocumentId(
+            nextDocument.id
+          )
+          setContent(
+            nextDocument.content
+          )
+        }
+      } else {
+        setActiveDocumentId(null)
+        setContent('')
+      }
+
+      setSelectedWord(null)
+      setCurrentOccurrence(0)
+    }
+  }
+
   return (
     <div className="flex h-screen flex-col bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
       {sidebarOpen && (
@@ -384,6 +440,13 @@ useEffect(() => {
           onClose={() =>
             setSidebarOpen(false)
           }
+          onDeleteDocument={
+            handleDeleteDocument
+          }
+          onRenameDocument={
+            handleRenameDocument
+          }
+          
         />
       )}
       <Header
@@ -407,7 +470,7 @@ useEffect(() => {
         }
         onRenameDocument={
           handleRenameDocument
-        } 
+        }
       />
 
       <div className="flex min-h-0 flex-1">
