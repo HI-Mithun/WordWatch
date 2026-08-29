@@ -8,6 +8,11 @@ import {
 
 import Header from './components/Header'
 
+import {
+  exportAsText,
+  exportAsMarkdown,
+} from './storage/export'
+
 import Editor, {
   type EditorHandle,
 } from './components/Editor'
@@ -24,6 +29,7 @@ import {
   getDocument,
   updateDocument,
   deleteDocument,
+  isDatabaseAvailable,
   type Document,
 } from './storage/database'
 
@@ -86,6 +92,9 @@ function App() {
   const [selectedWord, setSelectedWord] =
     useState<string | null>(null)
 
+  const [storageError, setStorageError] =
+    useState(false)
+  
   const [
     currentOccurrence,
     setCurrentOccurrence,
@@ -108,26 +117,47 @@ function App() {
 
     useEffect(() => {
       async function initializeDocuments() {
-        const savedDocuments =
-          await getAllDocuments()
+        const available =
+          await isDatabaseAvailable()
 
-        if (savedDocuments.length > 0) {
-          setDocuments(savedDocuments)
+        if (!available) {
+          setStorageError(true)
+          return
+        }
 
-          const document =
-            savedDocuments[0]
+        try {
+          const savedDocuments =
+            await getAllDocuments()
 
-          setOpenDocumentIds([document.id])
-          setActiveDocumentId(document.id)
-          setContent(document.content)
-        } else {
-          const document =
-            await createDocument()
+          if (savedDocuments.length > 0) {
+            setDocuments(savedDocuments)
 
-          setDocuments([document])
-          setOpenDocumentIds([document.id])
-          setActiveDocumentId(document.id)
-          setContent(document.content)
+            const document =
+              savedDocuments[0]
+
+            setActiveDocumentId(
+              document.id
+            )
+
+            setContent(
+              document.content
+            )
+          } else {
+            const document =
+              await createDocument()
+
+            setDocuments([document])
+
+            setActiveDocumentId(
+              document.id
+            )
+
+            setContent(
+              document.content
+            )
+          }
+        } catch {
+          setStorageError(true)
         }
       }
 
@@ -145,7 +175,9 @@ function App() {
           {
             content,
           }
-        )
+        ).catch(() => {
+          setStorageError(true)
+        })
       }, 500)
 
       return () => {
@@ -423,54 +455,127 @@ useEffect(() => {
   ) => {
     await deleteDocument(id)
 
-    setDocuments((current) =>
-      current.filter(
+    const remainingDocuments =
+      documents.filter(
         (document) =>
           document.id !== id
       )
-    )
 
-    setOpenDocumentIds((current) =>
-      current.filter(
+    const remainingOpenIds =
+      openDocumentIds.filter(
         (documentId) =>
           documentId !== id
       )
+
+    setDocuments(remainingDocuments)
+    setOpenDocumentIds(
+      remainingOpenIds
     )
 
-    if (id === activeDocumentId) {
-      const remainingOpenIds =
-        openDocumentIds.filter(
-          (documentId) =>
-            documentId !== id
+    if (id !== activeDocumentId) {
+      return
+    }
+
+    if (remainingOpenIds.length > 0) {
+      const nextId =
+        remainingOpenIds[0]
+
+      const nextDocument =
+        remainingDocuments.find(
+          (document) =>
+            document.id === nextId
         )
 
-      const nextId =
-        remainingOpenIds[0] ?? null
-
-      if (nextId) {
-        const nextDocument =
-          documents.find(
-            (document) =>
-              document.id === nextId
-          )
-
-        if (nextDocument) {
-          setActiveDocumentId(
-            nextDocument.id
-          )
-          setContent(
-            nextDocument.content
-          )
-        }
-      } else {
-        setActiveDocumentId(null)
-        setContent('')
+      if (nextDocument) {
+        setActiveDocumentId(
+          nextDocument.id
+        )
+        setContent(
+          nextDocument.content
+        )
       }
+    } else {
+      const newDocument =
+        await createDocument()
 
-      setSelectedWord(null)
-      setCurrentOccurrence(0)
+      setDocuments([
+        newDocument,
+        ...remainingDocuments,
+      ])
+
+      setOpenDocumentIds([
+        newDocument.id,
+      ])
+
+      setActiveDocumentId(
+        newDocument.id
+      )
+
+      setContent(
+        newDocument.content
+      )
     }
+
+    setSelectedWord(null)
+    setCurrentOccurrence(0)
   }
+
+  const handleExportText = (
+    id: string
+  ) => {
+    const document =
+      documents.find(
+        (document) =>
+          document.id === id
+      )
+
+    if (!document) {
+      return
+    }
+
+    exportAsText(
+      document.title,
+      document.content,
+    )
+  }
+
+  const handleExportMarkdown = (
+  id: string
+) => {
+  const document =
+    documents.find(
+      (document) =>
+        document.id === id
+    )
+
+  if (!document) {
+    return
+  }
+
+  exportAsMarkdown(
+    document.title,
+    document.content,
+  )
+}
+
+
+if (storageError) {
+  return (
+    <div className="flex h-screen items-center justify-center bg-white px-6 text-center text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+      <div className="max-w-md">
+        <h1 className="text-lg font-semibold">
+          WordWatch couldn't access local storage
+        </h1>
+
+        <p className="mt-2 text-sm text-zinc-500">
+          Your documents can't be saved in
+          this browser. Try enabling browser
+          storage or using a different browser.
+        </p>
+      </div>
+    </div>
+  )
+}
 
   return (
     <div className="flex h-screen flex-col bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
@@ -498,7 +603,15 @@ useEffect(() => {
           onRenameDocument={
             handleRenameDocument
           }
-          
+          onExportDocument={
+            handleExportText
+          }
+          onExportText={
+            handleExportText
+          }
+          onExportMarkdown={
+            handleExportMarkdown
+          }
         />
       )}
       <Header

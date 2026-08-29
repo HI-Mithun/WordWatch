@@ -23,6 +23,15 @@ class WordWatchDatabase extends Dexie {
 
 export const db = new WordWatchDatabase()
 
+export async function isDatabaseAvailable(): Promise<boolean> {
+  try {
+    await db.open()
+    return true
+  } catch {
+    return false
+  }
+}
+
 export async function createDocument(
   title = 'Untitled Document',
 ): Promise<Document> {

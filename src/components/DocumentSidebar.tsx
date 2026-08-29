@@ -12,10 +12,10 @@ interface DocumentSidebarProps {
   onCreateDocument: () => void
   onDeleteDocument: (id: string) => void
   onClose: () => void
-  onRenameDocument: (
-  id: string,
-  title: string
-) => void
+  onRenameDocument: (id: string, title: string) => void
+  onExportDocument: (id: string) => void
+  onExportText: (id: string) => void
+  onExportMarkdown: (id: string) => void
 }
 
 
@@ -28,6 +28,8 @@ function DocumentSidebar({
   onCreateDocument,
   onDeleteDocument,
   onRenameDocument,
+  onExportText,
+  onExportMarkdown,
   onClose,
   
 }: DocumentSidebarProps) {
@@ -155,6 +157,28 @@ function DocumentSidebar({
                       className="block w-full px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
                     >
                       Rename
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onExportText(document.id)
+                        setMenuDocumentId(null)
+                      }}
+                      className="block w-full px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                    >
+                      Export .txt
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onExportMarkdown(document.id)
+                        setMenuDocumentId(null)
+                      }}
+                      className="block w-full px-3 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                    >
+                      Export .md
                     </button>
 
                     <button
